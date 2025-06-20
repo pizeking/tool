@@ -1,0 +1,80 @@
+import tkinter as tk
+from tkinter import filedialog, messagebox, scrolledtext
+
+def convert_i80_data(input_text):
+    """转换 RF1 A5 A6 格式的数据"""
+    lines = input_text.strip().split('\n')
+    output = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith((';', '/')):
+            continue
+        
+        parts = line.split()
+        if len(parts) < 2 or not parts[0].upper().startswith('R'):
+            continue
+        
+        output.append(f"// {line}")
+        cmd = parts[0][1:].upper()
+        output.append(f"w_cmd_i80  0x{cmd} ; //cmd {cmd}")
+        
+        for i, param in enumerate(parts[1:], 1):
+            output.append(f"w_data_i80 0x{param} ; //para {i:02d}")
+        output.append("")
+    
+    return '\n'.join(output)
+
+def open_file():
+    filepath = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    if not filepath:
+        return
+    
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    input_text.delete(1.0, tk.END)
+    input_text.insert(tk.END, content)
+    convert_and_save()
+
+def save_file():
+    filepath = filedialog.asksaveasfilename(
+        defaultextension=".txt",
+        filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+    )
+    if not filepath:
+        return
+    
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(output_text.get(1.0, tk.END))
+    messagebox.showinfo("保存成功", f"文件已保存到:\n{filepath}")
+
+def convert_and_save():
+    input_data = input_text.get(1.0, tk.END)
+    converted = convert_i80_data(input_data)
+    output_text.delete(1.0, tk.END)
+    output_text.insert(tk.END, converted)
+
+# 创建主窗口
+root = tk.Tk()
+root.title("RF数据转码工具 v1.0")
+
+# 输入框
+tk.Label(root, text="输入数据:").pack()
+input_text = scrolledtext.ScrolledText(root, height=10, width=80)
+input_text.pack()
+
+# 按钮区域
+button_frame = tk.Frame(root)
+button_frame.pack(pady=5)
+
+tk.Button(button_frame, text="打开文件", command=open_file).pack(side=tk.LEFT, padx=5)
+tk.Button(button_frame, text="转换数据", command=convert_and_save).pack(side=tk.LEFT, padx=5)
+tk.Button(button_frame, text="保存结果", command=save_file).pack(side=tk.LEFT, padx=5)
+
+# 输出框
+tk.Label(root, text="转换结果:").pack()
+output_text = scrolledtext.ScrolledText(root, height=15, width=80)
+output_text.pack()
+
+root.mainloop()
